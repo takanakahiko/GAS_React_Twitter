@@ -4,7 +4,7 @@ function doGet(e) {
   }else if(e.parameter.oauth_token){
     return printAuthCallback(e);
   }else{
-    remove();
+    logout();
     return printRedirect();
   }
 }
