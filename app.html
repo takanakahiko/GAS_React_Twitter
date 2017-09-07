@@ -1,0 +1,138 @@
+<script type="text/jsx">
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+var ChildComponent = React.createClass({
+  render : function() {
+    var style = {
+      borderLeftColor:getRandomColor(),
+      paddingLeft:"60px",
+      borderLeftStyle:"solid",
+      borderLeftWidth:"15px",
+    };
+    return (
+      <div className="card" style={style}>
+        <div>
+          <span>
+            <img src={this.props.tweet.user.profile_image_url_https} style={{margin:"0",marginLeft:"-55px",float:"left"}}/>
+            <span ><b>{this.props.tweet.user.name}</b></span>
+            <span >&nbsp;</span>
+            <span>@<b>{this.props.tweet.user.screen_name}</b></span>
+          </span>
+        </div>
+        <span>{this.props.tweet.text}</span>
+      </div>
+    );
+  }
+});
+var InputAreaComponent = React.createClass({
+  getInitialState: function() {
+    return {
+      text:"",
+      loadingNow: false
+    };
+  },
+  toNyaan : function(){
+    this.setState({loadingNow:true});
+    var thiz = this;
+    var onFailure = function(error) {console.log("ERROR: " + error.message);};
+    var onSuccess = function(data){  thiz.setState({text:data,loadingNow:false}); };
+    google.script.run
+    .withSuccessHandler(onSuccess)
+    .withFailureHandler(onFailure)
+    .translateToNyaan(this.state.text)
+  },
+  tweet : function (e) {
+    this.setState({loadingNow:true});
+    var thiz = this;
+    var onFailure = function(error) {console.log("ERROR: " + error.message);};
+    var onSuccess = function(data){  thiz.setState({text:"",loadingNow:false}); thiz.props.tweetHandler(); };
+    google.script.run
+    .withSuccessHandler(onSuccess)
+    .withFailureHandler(onFailure)
+    .postAccessTwitter('statuses/update', {status:this.state.text});
+  },
+  onChangeText : function(e){
+    this.setState({text : e.target.value});
+  },
+  render : function() {
+    var textAreaStyle = {
+      display: "block",
+      resize: "none",
+      overflow: "hidden",
+      height: "65px",
+      width: "100%",
+      font:"20px bold"
+    };
+    return (
+      <div className="card" style={{padding:"15px"}} >
+        <textarea style={textAreaStyle} value={this.state.text} onChange={this.onChangeText}></textarea>
+        <button style={{marginTop:"10px"}} onClick={this.tweet} disabled={!this.state.text || this.state.loadingNow }>Tweet</button>
+        <span>&nbsp;</span>
+        <button style={{marginTop:"10px"}} onClick={this.toNyaan} disabled={!this.state.text || this.state.loadingNow }>Translate to Nyaan</button>
+      </div>
+    );
+  }
+});
+var ParentComponent = React.createClass({
+  getInitialState: function() {
+    return {
+      tweets:[],
+      username:""
+    };
+  },
+  getResultNodes: function () {
+    return this.state.tweets.map((tweet) => {
+      return <ChildComponent tweet={tweet} />;
+    });
+  },
+  reset : function(e){
+    var thiz = this;
+    var onFailure = function(error) {console.log("ERROR: " + error.message);};
+    var onSuccess = function(){ top.location.reload(); };
+    google.script.run
+    .withSuccessHandler(onSuccess)
+    .withFailureHandler(onFailure)
+    .logout();
+  },
+  loadData : function(e){
+    var thiz = this;
+    var onFailure = function(error) {console.log("ERROR: " + error.message);};
+    var onSuccess = function(data){ thiz.setState({tweets : data});};
+    google.script.run
+    .withSuccessHandler(onSuccess)
+    .withFailureHandler(onFailure)
+    .getAccessTwitter('statuses/home_timeline', {trim_user:false});
+  },
+  getUserName : function(){
+    var thiz = this;
+    var onFailure = function(error) {console.log("ERROR: " + error.message);};
+    var onSuccess = function(json){ thiz.setState({username : json.screen_name});};
+    google.script.run
+    .withSuccessHandler(onSuccess)
+    .withFailureHandler(onFailure)
+    .getAccessTwitter('account/settings', {});
+  },
+  componentWillMount : function(){
+    this.loadData();
+    this.getUserName();
+  },
+  render : function() {
+    return (
+      <div className="parent">
+        <p>ようこそ「{this.state.username}」さん</p>
+        <input type="button" onClick={this.reset} value="logout"></input>
+        <input type="button" onClick={this.loadData} value="loadData"></input>
+        <InputAreaComponent tweetHandler={this.loadData} />
+        {this.getResultNodes()}
+      </div>
+    );
+  }
+});
+var m = React.render(<ParentComponent />, document.getElementById('app'));
+</script>
