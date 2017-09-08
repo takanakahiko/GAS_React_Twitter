@@ -8,9 +8,37 @@ function getRandomColor() {
   return color;
 }
 
+function autoLink(text){
+  return text.split(" ").map(function(word){
+    var match = word.match(/(http(s)?:\/\/[\x21-\x7e]+)/gi);
+    if(match){
+      var url = match[0];
+      return [React.createElement('a',{href:url,target:"_blank"},url)," "];
+    }else{
+      return word + " ";
+    }
+  });
+}
+
 var gasHandler = google.script.run.withFailureHandler(function(error){console.log("ERROR: "+error.message);});
 
 var ChildComponent = React.createClass({
+  imageView : function(){
+    if(!this.props.tweet.extended_entities || !this.props.tweet.extended_entities.media){
+      return "";
+    }
+    var ret = [];
+    console.log(this.props.tweet.extended_entities.media);
+    for(var i in this.props.tweet.extended_entities.media){
+      var media = this.props.tweet.extended_entities.media[i];
+      if(media.type=="photo"){
+        var img = React.createElement('img',{src:media.media_url_https},null);
+        var wrapper = React.createElement('div',{className:"image-wrapper swiper-slide"},img);
+        ret.push(wrapper);
+      }
+    }
+    return ret;
+  },
   render : function() {
     var style = {
       borderLeftColor:getRandomColor(),
@@ -28,7 +56,17 @@ var ChildComponent = React.createClass({
             <span>@<b>{this.props.tweet.user.screen_name}</b></span>
           </span>
         </div>
-        <span>{this.props.tweet.text}</span>
+        <p>{autoLink(this.props.tweet.text)}</p>
+        <p>
+          <div className="swiper-container">
+            <div className="swiper-wrapper">
+              {this.imageView()}
+            </div>
+            <div className="swiper-pagination"></div>
+            <div className="swiper-button-next"></div>
+            <div className="swiper-button-prev"></div>
+          </div>
+        </p>
       </div>
     );
   }
@@ -84,9 +122,21 @@ var ParentComponent = React.createClass({
       username:""
     };
   },
+  componentDidUpdate: function() {
+    AOS.init({
+      duration: 600,
+    });
+    var swiper = new Swiper('.swiper-container', {
+      pagination: '.swiper-pagination',
+      paginationClickable: true,
+      nextButton: '.swiper-button-next',
+      prevButton: '.swiper-button-prev',
+      spaceBetween: 30
+    });
+  },
   getResultNodes: function () {
     return this.state.tweets.map((tweet) => {
-      return <ChildComponent tweet={tweet} />;
+      return <ChildComponent tweet={tweet} key={tweet.id} />;
     });
   },
   reset : function(e){
@@ -99,7 +149,7 @@ var ParentComponent = React.createClass({
     var thiz = this;
     gasHandler.withSuccessHandler(function(data){
       thiz.setState({tweets : data});
-    }).getAccessTwitter('statuses/home_timeline', {trim_user:false});
+    }).getAccessTwitter('statuses/home_timeline', {trim_user:false, count:200});
   },
   getUserName : function(){
     var thiz = this;
@@ -124,7 +174,4 @@ var ParentComponent = React.createClass({
   }
 });
 var m = React.render(<ParentComponent />, document.getElementById('app'));
-AOS.init({
-  duration: 600,
-})
 </script>
