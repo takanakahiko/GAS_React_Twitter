@@ -22,6 +22,14 @@ function autoLink(text){
 
 var gasHandler = google.script.run.withFailureHandler(function(error){console.log("ERROR: "+error.message);});
 
+var ScrollButton = React.createClass({
+  render : function() {
+    return <a href="#top" data-scroll><button className='scroll'>
+             <span className='arrow-up'>UP</span>
+           </button></a>;
+  }
+});
+
 var ChildComponent = React.createClass({
   imageView : function(){
     if(!this.props.tweet.extended_entities || !this.props.tweet.extended_entities.media){
@@ -47,7 +55,7 @@ var ChildComponent = React.createClass({
       borderLeftWidth:"15px",
     };
     return (
-      <div className="card" style={style} data-aos="fade-right">
+      <div className="card" style={style} data-aos="fade-up">
         <div>
           <span>
             <img src={this.props.tweet.user.profile_image_url_https} style={{margin:"0",marginLeft:"-55px",float:"left"}}/>
@@ -57,16 +65,14 @@ var ChildComponent = React.createClass({
           </span>
         </div>
         <p>{autoLink(this.props.tweet.text)}</p>
-        <p>
-          <div className="swiper-container">
-            <div className="swiper-wrapper">
-              {this.imageView()}
-            </div>
-            <div className="swiper-pagination"></div>
-            <div className="swiper-button-next"></div>
-            <div className="swiper-button-prev"></div>
+        <div className="swiper-container">
+          <div className="swiper-wrapper">
+            {this.imageView()}
           </div>
-        </p>
+          <div className="swiper-pagination"></div>
+          <div className="swiper-button-next"></div>
+          <div className="swiper-button-prev"></div>
+        </div>
       </div>
     );
   }
@@ -77,6 +83,15 @@ var InputAreaComponent = React.createClass({
       text:"",
       loadingNow: false
     };
+  },
+  keydownHandler(e){
+    if(e.keyCode===13 && e.ctrlKey) this.tweet()
+  },
+  componentDidMount(){
+    document.addEventListener('keydown',this.keydownHandler);
+  },
+  componentWillUnmount(){
+    document.removeEventListener('keydown',this.keydownHandler);
   },
   toNyaan : function(){
     this.setState({loadingNow:true});
@@ -105,8 +120,22 @@ var InputAreaComponent = React.createClass({
       width: "100%",
       font:"20px bold"
     };
+    var style = {
+      borderLeftColor:getRandomColor(),
+      paddingLeft:"60px",
+      borderLeftStyle:"solid",
+      borderLeftWidth:"15px",
+    };
     return (
-      <div className="card" style={{padding:"15px"}} >
+      <div className="card" style={style} >
+         <div>
+          <span>
+            <img src={this.props.user ? this.props.user.profile_image_url_https : ""} style={{margin:"0",marginLeft:"-55px",float:"left"}}/>
+            <span ><b>{this.props.user ? this.props.user.name : ""}</b></span>
+            <span >&nbsp;</span>
+            <span>@<b>{this.props.user ? this.props.user.screen_name : ""}</b></span>
+          </span>
+        </div>
         <textarea style={textAreaStyle} value={this.state.text} onChange={this.onChangeText}></textarea>
         <button style={{marginTop:"10px"}} onClick={this.tweet} disabled={!this.state.text || this.state.loadingNow }>Tweet</button>
         <span>&nbsp;</span>
@@ -119,7 +148,7 @@ var ParentComponent = React.createClass({
   getInitialState: function() {
     return {
       tweets:[],
-      username:""
+      user:null
     };
   },
   componentDidUpdate: function() {
@@ -133,6 +162,7 @@ var ParentComponent = React.createClass({
       prevButton: '.swiper-button-prev',
       spaceBetween: 30
     });
+    var sweetScroll = new SweetScroll({/* some options */});
   },
   getResultNodes: function () {
     return this.state.tweets.map((tweet) => {
@@ -149,13 +179,13 @@ var ParentComponent = React.createClass({
     var thiz = this;
     gasHandler.withSuccessHandler(function(data){
       thiz.setState({tweets : data});
-    }).getAccessTwitter('statuses/home_timeline', {trim_user:false, count:200});
+    }).getAccessTwitter('statuses/home_timeline', {trim_user:false, count:30});
   },
   getUserName : function(){
     var thiz = this;
     gasHandler.withSuccessHandler(function(data){
-      thiz.setState({username : data.screen_name});
-    }).getAccessTwitter('account/settings', {});
+      thiz.setState({user : data});
+    }).getAccessTwitter('account/verify_credentials', {});
   },
   componentWillMount : function(){
     this.loadData();
@@ -164,11 +194,11 @@ var ParentComponent = React.createClass({
   render : function() {
     return (
       <div className="parent">
-        <p>ようこそ「{this.state.username}」さん</p>
         <input type="button" onClick={this.reset} value="logout"></input>
         <input type="button" onClick={this.loadData} value="loadData"></input>
-        <InputAreaComponent tweetHandler={this.loadData} />
+        <InputAreaComponent tweetHandler={this.loadData} user={this.state.user}/>
         {this.getResultNodes()}
+        <ScrollButton time="16.66"/>
       </div>
     );
   }
