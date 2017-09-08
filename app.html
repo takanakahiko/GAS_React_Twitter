@@ -7,6 +7,9 @@ function getRandomColor() {
   }
   return color;
 }
+
+var gasHandler = google.script.run.withFailureHandler(function(error){console.log("ERROR: "+error.message);});
+
 var ChildComponent = React.createClass({
   render : function() {
     var style = {
@@ -16,7 +19,7 @@ var ChildComponent = React.createClass({
       borderLeftWidth:"15px",
     };
     return (
-      <div className="card" style={style}>
+      <div className="card" style={style} data-aos="fade-right">
         <div>
           <span>
             <img src={this.props.tweet.user.profile_image_url_https} style={{margin:"0",marginLeft:"-55px",float:"left"}}/>
@@ -40,22 +43,17 @@ var InputAreaComponent = React.createClass({
   toNyaan : function(){
     this.setState({loadingNow:true});
     var thiz = this;
-    var onFailure = function(error) {console.log("ERROR: " + error.message);};
-    var onSuccess = function(data){  thiz.setState({text:data,loadingNow:false}); };
-    google.script.run
-    .withSuccessHandler(onSuccess)
-    .withFailureHandler(onFailure)
-    .translateToNyaan(this.state.text)
+    gasHandler.withSuccessHandler(function(data){
+      thiz.setState({text:data,loadingNow:false});
+    }).translateToNyaan(this.state.text);
   },
   tweet : function (e) {
     this.setState({loadingNow:true});
     var thiz = this;
-    var onFailure = function(error) {console.log("ERROR: " + error.message);};
-    var onSuccess = function(data){  thiz.setState({text:"",loadingNow:false}); thiz.props.tweetHandler(); };
-    google.script.run
-    .withSuccessHandler(onSuccess)
-    .withFailureHandler(onFailure)
-    .postAccessTwitter('statuses/update', {status:this.state.text});
+    gasHandler.withSuccessHandler(function(data){
+      thiz.setState({text:"",loadingNow:false});
+      thiz.props.tweetHandler();
+    }).postAccessTwitter('statuses/update', {status:this.state.text});
   },
   onChangeText : function(e){
     this.setState({text : e.target.value});
@@ -93,30 +91,21 @@ var ParentComponent = React.createClass({
   },
   reset : function(e){
     var thiz = this;
-    var onFailure = function(error) {console.log("ERROR: " + error.message);};
-    var onSuccess = function(){ top.location.reload(); };
-    google.script.run
-    .withSuccessHandler(onSuccess)
-    .withFailureHandler(onFailure)
-    .logout();
+    gasHandler.withSuccessHandler(function(data){
+      top.location.reload();
+    }).logout();
   },
   loadData : function(e){
     var thiz = this;
-    var onFailure = function(error) {console.log("ERROR: " + error.message);};
-    var onSuccess = function(data){ thiz.setState({tweets : data});};
-    google.script.run
-    .withSuccessHandler(onSuccess)
-    .withFailureHandler(onFailure)
-    .getAccessTwitter('statuses/home_timeline', {trim_user:false});
+    gasHandler.withSuccessHandler(function(data){
+      thiz.setState({tweets : data});
+    }).getAccessTwitter('statuses/home_timeline', {trim_user:false});
   },
   getUserName : function(){
     var thiz = this;
-    var onFailure = function(error) {console.log("ERROR: " + error.message);};
-    var onSuccess = function(json){ thiz.setState({username : json.screen_name});};
-    google.script.run
-    .withSuccessHandler(onSuccess)
-    .withFailureHandler(onFailure)
-    .getAccessTwitter('account/settings', {});
+    gasHandler.withSuccessHandler(function(data){
+      thiz.setState({username : data.screen_name});
+    }).getAccessTwitter('account/settings', {});
   },
   componentWillMount : function(){
     this.loadData();
@@ -135,4 +124,7 @@ var ParentComponent = React.createClass({
   }
 });
 var m = React.render(<ParentComponent />, document.getElementById('app'));
+AOS.init({
+  duration: 600,
+})
 </script>
