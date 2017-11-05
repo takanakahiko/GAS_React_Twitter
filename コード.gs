@@ -1,4 +1,3 @@
-//アクセスが来たときに実行される
 function doGet(e) {
   if(hasAccess()){
     return printMainPage();
