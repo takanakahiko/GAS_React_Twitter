@@ -2,6 +2,7 @@ function doGet(e) {
   if(hasAccess()){
     return printMainPage();
   }else if(e.parameter.oauth_token){
+    console.log("test")
     return printAuthCallback(e);
   }else{
     logout();
@@ -36,6 +37,7 @@ function include(filename) {
 }
 
 function getMyUrl(){
+  Logger.log(ScriptApp.getService().getUrl());
   return ScriptApp.getService().getUrl();
 }
 
